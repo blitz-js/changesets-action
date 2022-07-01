@@ -29,9 +29,10 @@ const createRelease = async (
 ) => {
   try {
 
-    let singleReleaseData: {tagName: string, body: string[]} = {
+    let singleReleaseData: {tagName: string, body: string[], preRelease: boolean} = {
       tagName: ``,
-      body: []
+      body: [],
+      preRelease: false 
     }
 
     for(const pkg of packages) {
@@ -48,7 +49,8 @@ const createRelease = async (
       }
 
       singleReleaseData.tagName = `v${pkg.packageJson.version}`
-      singleReleaseData.body.push(changelogEntry.content)
+      singleReleaseData.body.push(`## ${pkg.packageJson.name}/n ${changelogEntry.content}`)
+      singleReleaseData.preRelease = pkg.packageJson.version.includes("-")
 
 
     }
@@ -57,13 +59,13 @@ const createRelease = async (
     
 
 
-    // await octokit.repos.createRelease({
-    //   name: tagName,
-    //   tag_name: tagName,
-    //   body: changelogEntry.content,
-    //   prerelease: pkg.packageJson.version.includes("-"),
-    //   ...github.context.repo,
-    // });
+    await octokit.repos.createRelease({
+      name: singleReleaseData.tagName,
+      tag_name: singleReleaseData.tagName,
+      body: singleReleaseData.body.join(','),
+      prerelease: singleReleaseData.preRelease,
+      ...github.context.repo,
+    });
   } catch (err: any) {
     // if we can't find a changelog, the user has probably disabled changelogs
     if (err.code !== "ENOENT") {
