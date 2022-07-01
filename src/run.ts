@@ -28,7 +28,7 @@ const createRelease = async (
   packages: Package[]
 ) => {
   try {
-    console.log(packages)
+    console.log("packages", packages)
     // let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
 
     // let changelog = await fs.readFile(changelogFileName, "utf8");
