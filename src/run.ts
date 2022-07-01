@@ -24,29 +24,31 @@ const MAX_CHARACTERS_PER_MESSAGE = 60000;
 
 const createRelease = async (
   octokit: ReturnType<typeof github.getOctokit>,
-  { pkg, tagName }: { pkg: Package; tagName: string }
+  // { pkg, tagName }: { pkg: Package; tagName: string }
+  packages: Package[]
 ) => {
   try {
-    let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
+    console.log(packages)
+    // let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
 
-    let changelog = await fs.readFile(changelogFileName, "utf8");
+    // let changelog = await fs.readFile(changelogFileName, "utf8");
 
-    let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
-    if (!changelogEntry) {
-      // we can find a changelog but not the entry for this version
-      // if this is true, something has probably gone wrong
-      throw new Error(
-        `Could not find changelog entry for ${pkg.packageJson.name}@${pkg.packageJson.version}`
-      );
-    }
+    // let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
+    // if (!changelogEntry) {
+    //   // we can find a changelog but not the entry for this version
+    //   // if this is true, something has probably gone wrong
+    //   throw new Error(
+    //     `Could not find changelog entry for ${pkg.packageJson.name}@${pkg.packageJson.version}`
+    //   );
+    // }
 
-    await octokit.repos.createRelease({
-      name: tagName,
-      tag_name: tagName,
-      body: changelogEntry.content,
-      prerelease: pkg.packageJson.version.includes("-"),
-      ...github.context.repo,
-    });
+    // await octokit.repos.createRelease({
+    //   name: tagName,
+    //   tag_name: tagName,
+    //   body: changelogEntry.content,
+    //   prerelease: pkg.packageJson.version.includes("-"),
+    //   ...github.context.repo,
+    // });
   } catch (err: any) {
     // if we can't find a changelog, the user has probably disabled changelogs
     if (err.code !== "ENOENT") {
@@ -114,14 +116,15 @@ export async function runPublish({
     }
 
     if (createGithubReleases) {
-      await Promise.all(
-        releasedPackages.map((pkg) =>
-          createRelease(octokit, {
-            pkg,
-            tagName: `${pkg.packageJson.name}@${pkg.packageJson.version}`,
-          })
-        )
-      );
+      await createRelease(octokit, releasedPackages)
+      // await Promise.all(
+      //   releasedPackages.map((pkg) =>
+      //     createRelease(octokit, {
+      //       pkg,
+      //       tagName: `${pkg.packageJson.name}@${pkg.packageJson.version}`,
+      //     })
+      //   )
+      // );
     }
   } else {
     if (packages.length === 0) {
@@ -139,10 +142,11 @@ export async function runPublish({
       if (match) {
         releasedPackages.push(pkg);
         if (createGithubReleases) {
-          await createRelease(octokit, {
-            pkg,
-            tagName: `v${pkg.packageJson.version}`,
-          });
+          await createRelease(octokit, packages)
+          // await createRelease(octokit, {
+          //   pkg,
+          //   tagName: `v${pkg.packageJson.version}`,
+          // });
         }
         break;
       }
