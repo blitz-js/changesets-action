@@ -15,7 +15,6 @@ import {
 import * as gitUtils from "./gitUtils";
 import readChangesetState from "./readChangesetState";
 import resolveFrom from "resolve-from";
-import * as core from "@actions/core";
 
 // GitHub Issues/PRs messages have a max size limit on the
 // message body payload.
@@ -374,7 +373,7 @@ export async function runVersion({
       dir: './',
       packageJson: {
         name: "Action Test",
-        version: versionBranch
+        version: "1.0.3"
       }
     }])
 
