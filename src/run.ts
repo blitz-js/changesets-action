@@ -29,21 +29,34 @@ const createRelease = async (
   packages: Package[]
 ) => {
   try {
-    core.setOutput("PACKAGES", `${packages}`);
 
-    console.log("packages", packages)
-    // let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
+    let singleReleaseData: {tagName: string, body: string[]} = {
+      tagName: ``,
+      body: []
+    }
 
-    // let changelog = await fs.readFile(changelogFileName, "utf8");
+    for(const pkg of packages) {
+      let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
+      let changelog = await fs.readFile(changelogFileName, "utf8");
+      let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
 
-    // let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
-    // if (!changelogEntry) {
-    //   // we can find a changelog but not the entry for this version
-    //   // if this is true, something has probably gone wrong
-    //   throw new Error(
-    //     `Could not find changelog entry for ${pkg.packageJson.name}@${pkg.packageJson.version}`
-    //   );
-    // }
+      if (!changelogEntry) {
+        // we can find a changelog but not the entry for this version
+        // if this is true, something has probably gone wrong
+        throw new Error(
+          `Could not find changelog entry for ${pkg.packageJson.name}@${pkg.packageJson.version}`
+        );
+      }
+
+      singleReleaseData.tagName = `v${pkg.packageJson.version}`
+      singleReleaseData.body.push(changelogEntry.content)
+
+
+    }
+
+    console.log(singleReleaseData)
+    
+
 
     // await octokit.repos.createRelease({
     //   name: tagName,
