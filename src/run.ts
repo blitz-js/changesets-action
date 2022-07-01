@@ -15,6 +15,7 @@ import {
 import * as gitUtils from "./gitUtils";
 import readChangesetState from "./readChangesetState";
 import resolveFrom from "resolve-from";
+import * as core from "@actions/core";
 
 // GitHub Issues/PRs messages have a max size limit on the
 // message body payload.
@@ -28,7 +29,8 @@ const createRelease = async (
   packages: Package[]
 ) => {
   try {
-    process.stdout.write(packages)
+    core.setOutput("PACKAGES", `${packages}`);
+
     console.log("packages", packages)
     // let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
 
@@ -355,6 +357,14 @@ export async function runVersion({
       ...github.context.repo,
     });
 
+    await createRelease(octokit, [{
+      dir: './',
+      packageJson: {
+        name: "Action Test",
+        version: versionBranch
+      }
+    }])
+
     return {
       pullRequestNumber: newPullRequest.number,
     };
@@ -373,4 +383,5 @@ export async function runVersion({
       pullRequestNumber: pullRequest.number,
     };
   }
+  
 }
