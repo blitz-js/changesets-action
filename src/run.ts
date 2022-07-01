@@ -28,6 +28,7 @@ const createRelease = async (
   packages: Package[]
 ) => {
   try {
+    process.stdout.write(packages)
     console.log("packages", packages)
     // let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
 
