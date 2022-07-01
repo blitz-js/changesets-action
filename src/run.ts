@@ -49,7 +49,7 @@ const createRelease = async (
       }
 
       singleReleaseData.tagName = `v${pkg.packageJson.version}`
-      singleReleaseData.body.push(`## ${pkg.packageJson.name}/n ${changelogEntry.content}`)
+      singleReleaseData.body.push(`## ${pkg.packageJson.name}\n ${changelogEntry.content}`)
       singleReleaseData.preRelease = pkg.packageJson.version.includes("-")
 
 
