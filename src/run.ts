@@ -372,14 +372,6 @@ export async function runVersion({
       ...github.context.repo,
     });
 
-    await createRelease(octokit, [{
-      dir: './',
-      packageJson: {
-        name: "Action Test",
-        version: "1.0.3"
-      }
-    }])
-
     return {
       pullRequestNumber: newPullRequest.number,
     };
