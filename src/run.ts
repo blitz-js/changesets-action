@@ -48,9 +48,9 @@ const createRelease = async (
         );
       }
       console.log("Before Release",changelogEntry.content)
-      changelogEntry.content.replace('^### (Patch Changes)', '### 🐞 Patches')
-      // changelogEntry.content.replace('^### (Minor Changes)', '### 🚀 Features/Improvements')
-      // changelogEntry.content.replace('^### (Major Changes)', '### 🔥 Breaking Changes')
+      changelogEntry.content.replace('/^### Patch Changes$/', '### 🐞 Patches')
+      changelogEntry.content.replace('/^### Minor Changes$/', '### 🚀 Features/Improvements')
+      changelogEntry.content.replace('/^### Major Changes$/', '### 🔥 Breaking Changes')
       console.log("After Release",changelogEntry.content)
 
       singleReleaseData.tagName = `v${pkg.packageJson.version}`
