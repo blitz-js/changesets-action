@@ -148,51 +148,54 @@ export async function runPublish({
       // );
       console.log("Not root", releasedPackages)
 
-      // try {
-      //   let singleReleaseData: {tagName: string, body: string[], preRelease: boolean} = {
-      //     tagName: '',
-      //     body: [],
-      //     preRelease: false 
-      //   }
+      try {
+        let singleReleaseData: {tagName: string, body: string[], preRelease: boolean} = {
+          tagName: '',
+          body: [],
+          preRelease: false 
+        }
 
-      //   for(const pkg of releasedPackages) {
-      //     let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
-      //     let changelog = await fs.readFile(changelogFileName, "utf8");
-      //     let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
+        for(const pkg of releasedPackages) {
+          let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
+          let changelog = await fs.readFile(changelogFileName, "utf8");
+          let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
     
-      //     if (!changelogEntry) {
-      //       // we can find a changelog but not the entry for this version
-      //       // if this is true, something has probably gone wrong
-      //       throw new Error(
-      //         `Could not find changelog entry for ${pkg.packageJson.name}@${pkg.packageJson.version}`
-      //       );
-      //     }
-      //     let content = changelogEntry.content.toString()
+          if (!changelogEntry) {
+            // we can find a changelog but not the entry for this version
+            // if this is true, something has probably gone wrong
+            throw new Error(
+              `Could not find changelog entry for ${pkg.packageJson.name}@${pkg.packageJson.version}`
+            );
+          }
+          let content = changelogEntry.content.toString()
     
-      //     content = content.replace(/^### Patch Changes$/gm, '### 🐞 Patches')
-      //     content = content.replace(/^### Minor Changes$/gm, '### 🚀 Features/Improvements')
-      //     content = content.replace(/^### Major Changes$/gm, '### 🔥 Breaking Changes')
+          content = content.replace(/^### Patch Changes$/gm, '### 🐞 Patches')
+          content = content.replace(/^### Minor Changes$/gm, '### 🚀 Features/Improvements')
+          content = content.replace(/^### Major Changes$/gm, '### 🔥 Breaking Changes')
     
-      //     singleReleaseData.tagName = `v${packages[0].packageJson.version}`
-      //     singleReleaseData.body.push(`## ${pkg.packageJson.name}\n ${content}`)
-      //     singleReleaseData.preRelease = pkg.packageJson.version.includes("-")
+          singleReleaseData.tagName = `v${packages[0].packageJson.version}`
+          singleReleaseData.body.push(`## ${pkg.packageJson.name}\n ${content}`)
+          singleReleaseData.preRelease = pkg.packageJson.version.includes("-")
     
     
-      //   }
-    
-      //   await octokit.repos.createRelease({
-      //     name: singleReleaseData.tagName,
-      //     tag_name: singleReleaseData.tagName,
-      //     body: singleReleaseData.body.join(','),
-      //     prerelease: singleReleaseData.preRelease,
-      //     ...github.context.repo,
-      //   });
-      // } catch (err: any) {
-      //   // if we can't find a changelog, the user has probably disabled changelogs
-      //   if (err.code !== "ENOENT") {
-      //     throw err;
-      //   }
-      // }
+        }
+        
+        if (releasedPackages.length) {
+          await octokit.repos.createRelease({
+            name: singleReleaseData.tagName,
+            tag_name: singleReleaseData.tagName,
+            body: singleReleaseData.body.join(','),
+            prerelease: singleReleaseData.preRelease,
+            ...github.context.repo,
+          });
+        }
+
+      } catch (err: any) {
+        // if we can't find a changelog, the user has probably disabled changelogs
+        if (err.code !== "ENOENT") {
+          throw err;
+        }
+      }
 
     }
   } else {
