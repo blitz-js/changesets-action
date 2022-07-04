@@ -47,14 +47,16 @@ const createRelease = async (
           `Could not find changelog entry for ${pkg.packageJson.name}@${pkg.packageJson.version}`
         );
       }
+      let content = changelogEntry.content
+
       console.log("Before Release",changelogEntry.content)
-      changelogEntry.content.replace('/^### Patch Changes$/gm', '### 🐞 Patches')
-      changelogEntry.content.replace('/^### Minor Changes$/gm', '### 🚀 Features/Improvements')
-      changelogEntry.content.replace('/^### Major Changes$/gm', '### 🔥 Breaking Changes')
+      content = content.replace('/^### Patch Changes$/gm', '### 🐞 Patches')
+      content = content.replace('/^### Minor Changes$/gm', '### 🚀 Features/Improvements')
+      content = content.replace('/^### Major Changes$/gm', '### 🔥 Breaking Changes')
       console.log("After Release",changelogEntry.content)
 
       singleReleaseData.tagName = `v${pkg.packageJson.version}`
-      singleReleaseData.body.push(`## ${pkg.packageJson.name}\n ${changelogEntry.content}`)
+      singleReleaseData.body.push(`## ${pkg.packageJson.name}\n ${content}`)
       singleReleaseData.preRelease = pkg.packageJson.version.includes("-")
 
 
