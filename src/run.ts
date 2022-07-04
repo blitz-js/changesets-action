@@ -48,6 +48,10 @@ const createRelease = async (
         );
       }
 
+      changelogEntry.content.replace('^### (Patch Changes)', '### 🐞 Patches')
+      changelogEntry.content.replace('^### (Minor Changes)', '### 🚀 Features/Improvements')
+      changelogEntry.content.replace('^### (Major Changes)', '### 🔥 Breaking Changes')
+
       singleReleaseData.tagName = `v${pkg.packageJson.version}`
       singleReleaseData.body.push(`## ${pkg.packageJson.name}\n ${changelogEntry.content}`)
       singleReleaseData.preRelease = pkg.packageJson.version.includes("-")
