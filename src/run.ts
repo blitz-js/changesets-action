@@ -47,13 +47,11 @@ const createRelease = async (
           `Could not find changelog entry for ${pkg.packageJson.name}@${pkg.packageJson.version}`
         );
       }
-      let content = changelogEntry.content
+      let content = changelogEntry.content.toString()
 
-      console.log("Before Release",changelogEntry.content)
-      content = content.replace('/^### Patch Changes$/gm', '### 🐞 Patches')
-      content = content.replace('/^### Minor Changes$/gm', '### 🚀 Features/Improvements')
-      content = content.replace('/^### Major Changes$/gm', '### 🔥 Breaking Changes')
-      console.log("After Release",changelogEntry.content)
+      content = content.replace(/^### Patch Changes$/gm, '### 🐞 Patches')
+      content = content.replace(/^### Minor Changes$/gm, '### 🚀 Features/Improvements')
+      content = content.replace(/^### Major Changes$/gm, '### 🔥 Breaking Changes')
 
       singleReleaseData.tagName = `v${pkg.packageJson.version}`
       singleReleaseData.body.push(`## ${pkg.packageJson.name}\n ${content}`)
@@ -61,10 +59,6 @@ const createRelease = async (
 
 
     }
-
-    console.log(singleReleaseData)
-    
-
 
     await octokit.repos.createRelease({
       name: singleReleaseData.tagName,
