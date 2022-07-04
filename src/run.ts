@@ -21,6 +21,8 @@ import resolveFrom from "resolve-from";
 // `body is too long (maximum is 65536 characters)`.
 // To avoid that, we ensure to cap the message to 60k chars.
 const MAX_CHARACTERS_PER_MESSAGE = 60000;
+let releasedPackages: Package[] = [];
+
 
 const createRelease = async (
   octokit: ReturnType<typeof github.getOctokit>,
@@ -34,6 +36,7 @@ const createRelease = async (
       body: [],
       preRelease: false 
     }
+
 
     for(const pkg of packages) {
       let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
@@ -111,7 +114,7 @@ export async function runPublish({
   await gitUtils.pushTags();
 
   let { packages, tool } = await getPackages(cwd);
-  let releasedPackages: Package[] = [];
+  
 
   if (tool !== "root") {
     let newTagRegex = /New tag:\s+(@[^/]+\/[^@]+|[^/]+)@([^\s]+)/;
@@ -134,7 +137,7 @@ export async function runPublish({
     }
 
     if (createGithubReleases) {
-      await createRelease(octokit, releasedPackages)
+      // await createRelease(octokit, releasedPackages)
       // await Promise.all(
       //   releasedPackages.map((pkg) =>
       //     createRelease(octokit, {
@@ -143,6 +146,52 @@ export async function runPublish({
       //     })
       //   )
       // );
+      try {
+        let singleReleaseData: {tagName: string, body: string[], preRelease: boolean} = {
+          tagName: '',
+          body: [],
+          preRelease: false 
+        }
+
+        for(const pkg of releasedPackages) {
+          let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
+          let changelog = await fs.readFile(changelogFileName, "utf8");
+          let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
+    
+          if (!changelogEntry) {
+            // we can find a changelog but not the entry for this version
+            // if this is true, something has probably gone wrong
+            throw new Error(
+              `Could not find changelog entry for ${pkg.packageJson.name}@${pkg.packageJson.version}`
+            );
+          }
+          let content = changelogEntry.content.toString()
+    
+          content = content.replace(/^### Patch Changes$/gm, '### 🐞 Patches')
+          content = content.replace(/^### Minor Changes$/gm, '### 🚀 Features/Improvements')
+          content = content.replace(/^### Major Changes$/gm, '### 🔥 Breaking Changes')
+    
+          singleReleaseData.tagName = `v${packages[0].packageJson.version}`
+          singleReleaseData.body.push(`## ${pkg.packageJson.name}\n ${content}`)
+          singleReleaseData.preRelease = pkg.packageJson.version.includes("-")
+    
+    
+        }
+    
+        await octokit.repos.createRelease({
+          name: singleReleaseData.tagName,
+          tag_name: singleReleaseData.tagName,
+          body: singleReleaseData.body.join(','),
+          prerelease: singleReleaseData.preRelease,
+          ...github.context.repo,
+        });
+      } catch (err: any) {
+        // if we can't find a changelog, the user has probably disabled changelogs
+        if (err.code !== "ENOENT") {
+          throw err;
+        }
+      }
+
     }
   } else {
     if (packages.length === 0) {
@@ -160,11 +209,47 @@ export async function runPublish({
       if (match) {
         releasedPackages.push(pkg);
         if (createGithubReleases) {
-          await createRelease(octokit, packages)
+          // await createRelease(octokit, packages)
           // await createRelease(octokit, {
           //   pkg,
           //   tagName: `v${pkg.packageJson.version}`,
           // });
+
+          try {
+     
+              let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
+              let changelog = await fs.readFile(changelogFileName, "utf8");
+              let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
+        
+              if (!changelogEntry) {
+                // we can find a changelog but not the entry for this version
+                // if this is true, something has probably gone wrong
+                throw new Error(
+                  `Could not find changelog entry for ${pkg.packageJson.name}@${pkg.packageJson.version}`
+                );
+              }
+              let content = changelogEntry.content.toString()
+        
+              content = content.replace(/^### Patch Changes$/gm, '### 🐞 Patches')
+              content = content.replace(/^### Minor Changes$/gm, '### 🚀 Features/Improvements')
+              content = content.replace(/^### Major Changes$/gm, '### 🔥 Breaking Changes')
+        
+        
+        
+            await octokit.repos.createRelease({
+              name: `v${pkg.packageJson.version}`,
+              tag_name: `v${pkg.packageJson.version}`,
+              body: `${content}`,
+              prerelease: pkg.packageJson.version.includes("-"),
+              ...github.context.repo,
+            });
+          } catch (err: any) {
+            // if we can't find a changelog, the user has probably disabled changelogs
+            if (err.code !== "ENOENT") {
+              throw err;
+            }
+          }
+    
         }
         break;
       }
