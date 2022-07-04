@@ -173,18 +173,18 @@ export async function runPublish({
           content = content.replace(/^### Minor Changes$/gm, '### 🚀 Features/Improvements')
           content = content.replace(/^### Major Changes$/gm, '### 🔥 Breaking Changes')
     
-          singleReleaseData.tagName = `v${packages[0].packageJson.version}`
+          singleReleaseData.tagName = `v${releasedPackages[0].packageJson.version}`
           singleReleaseData.body.push(`## ${pkg.packageJson.name}\n ${content}`)
           singleReleaseData.preRelease = pkg.packageJson.version.includes("-")
     
     
         }
-        
+
         if (releasedPackages.length) {
           await octokit.repos.createRelease({
             name: singleReleaseData.tagName,
             tag_name: singleReleaseData.tagName,
-            body: singleReleaseData.body.join(','),
+            body: singleReleaseData.body.join('\n\n'),
             prerelease: singleReleaseData.preRelease,
             ...github.context.repo,
           });
