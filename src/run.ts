@@ -11,6 +11,7 @@ import {
   getChangedPackages,
   sortTheThings,
   getVersionsByDirectory,
+  levelToString,
 } from "./utils";
 import * as gitUtils from "./gitUtils";
 import readChangesetState from "./readChangesetState";
@@ -31,17 +32,25 @@ const createRelease = async (
 ) => {
   try {
 
-    let singleReleaseData: {tagName: string, body: string[], preRelease: boolean} = {
+    let singleReleaseData: { tagName: string, body: string[], preRelease: boolean } = {
       tagName: ``,
       body: [],
-      preRelease: false 
+      preRelease: false
     }
 
+    let chnagelogContent: Record<'dep' | 'patch' | 'minor' | 'major', string[]> = {
+      dep: [],
+      patch: [],
+      minor: [],
+      major: [],
+    }
 
-    for(const pkg of packages) {
+    for (const pkg of packages) {
       let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
       let changelog = await fs.readFile(changelogFileName, "utf8");
       let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
+
+
 
       if (!changelogEntry) {
         // we can find a changelog but not the entry for this version
@@ -51,25 +60,67 @@ const createRelease = async (
         );
       }
       let content = changelogEntry.content.toString()
+      let level = changelogEntry.highestLevel
 
-      content = content.replace(/^### Patch Changes$/gm, '### 🐞 Patches')
-      content = content.replace(/^### Minor Changes$/gm, '### 🚀 Features/Improvements')
-      content = content.replace(/^### Major Changes$/gm, '### 🔥 Breaking Changes')
+      content = content.replace(/^### Patch Changes$/gm, '')
+      content = content.replace(/^### Minor Changes$/gm, '')
+      content = content.replace(/^### Major Changes$/gm, '')
+
+      content = `
+      ### ${pkg.packageJson.name}
+
+      ${content}
+      `
+
+      chnagelogContent[levelToString(level)].push(content)
 
       singleReleaseData.tagName = `v${pkg.packageJson.version}`
-      singleReleaseData.body.push(`## ${pkg.packageJson.name}\n ${content}`)
       singleReleaseData.preRelease = pkg.packageJson.version.includes("-")
-
-
     }
 
-    await octokit.repos.createRelease({
-      name: singleReleaseData.tagName,
-      tag_name: singleReleaseData.tagName,
-      body: singleReleaseData.body.join(','),
-      prerelease: singleReleaseData.preRelease,
-      ...github.context.repo,
-    });
+
+
+    let finalChangelog: string[] = []
+
+    if (chnagelogContent.major.length) {
+      finalChangelog.push(
+        `
+        ## 🔥 Breaking Changes
+        
+        ${chnagelogContent.major.join('\n\n')}
+        `
+      )
+    }
+
+    if (chnagelogContent.minor.length) {
+      finalChangelog.push(
+        `
+        ## 🚀 Features/Improvements
+        
+        ${chnagelogContent.minor.join('\n\n')}
+        `
+      )
+    }
+
+    if (chnagelogContent.patch.length) {
+      finalChangelog.push(
+        `
+        ## 🐞 Patches
+        
+        ${chnagelogContent.patch.join('\n\n')}
+        `
+      )
+    }
+
+    if (finalChangelog.length) {
+      await octokit.repos.createRelease({
+        name: singleReleaseData.tagName,
+        tag_name: singleReleaseData.tagName,
+        body: finalChangelog.join('\n\n'),
+        prerelease: singleReleaseData.preRelease,
+        ...github.context.repo,
+      });
+    }
   } catch (err: any) {
     // if we can't find a changelog, the user has probably disabled changelogs
     if (err.code !== "ENOENT") {
@@ -89,12 +140,12 @@ type PublishedPackage = { name: string; version: string };
 
 type PublishResult =
   | {
-      published: true;
-      publishedPackages: PublishedPackage[];
-    }
+    published: true;
+    publishedPackages: PublishedPackage[];
+  }
   | {
-      published: false;
-    };
+    published: false;
+  };
 
 export async function runPublish({
   script,
@@ -114,7 +165,7 @@ export async function runPublish({
   await gitUtils.pushTags();
 
   let { packages, tool } = await getPackages(cwd);
-  
+
 
   if (tool !== "root") {
     let newTagRegex = /New tag:\s+(@[^/]+\/[^@]+|[^/]+)@([^\s]+)/;
@@ -130,35 +181,34 @@ export async function runPublish({
       if (pkg === undefined) {
         throw new Error(
           `Package "${pkgName}" not found.` +
-            "This is probably a bug in the action, please open an issue"
+          "This is probably a bug in the action, please open an issue"
         );
       }
       releasedPackages.push(pkg);
     }
 
     if (createGithubReleases) {
-      // await createRelease(octokit, releasedPackages)
-      // await Promise.all(
-      //   releasedPackages.map((pkg) =>
-      //     createRelease(octokit, {
-      //       pkg,
-      //       tagName: `${pkg.packageJson.name}@${pkg.packageJson.version}`,
-      //     })
-      //   )
-      // );
-      console.log("Not root", releasedPackages)
 
       try {
-        let singleReleaseData: {tagName: string, body: string[], preRelease: boolean} = {
+        let singleReleaseData: { tagName: string, body: string[], preRelease: boolean } = {
           tagName: '',
           body: [],
-          preRelease: false 
+          preRelease: false
         }
 
-        for(const pkg of releasedPackages) {
+        let chnagelogContent: Record<'dep' | 'patch' | 'minor' | 'major', string[]> = {
+          dep: [],
+          patch: [],
+          minor: [],
+          major: [],
+        }
+    
+        for (const pkg of packages) {
           let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
           let changelog = await fs.readFile(changelogFileName, "utf8");
           let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
+    
+    
     
           if (!changelogEntry) {
             // we can find a changelog but not the entry for this version
@@ -168,28 +218,67 @@ export async function runPublish({
             );
           }
           let content = changelogEntry.content.toString()
+          let level = changelogEntry.highestLevel
     
-          content = content.replace(/^### Patch Changes$/gm, '### 🐞 Patches')
-          content = content.replace(/^### Minor Changes$/gm, '### 🚀 Features/Improvements')
-          content = content.replace(/^### Major Changes$/gm, '### 🔥 Breaking Changes')
+          content = content.replace(/^### Patch Changes$/gm, '')
+          content = content.replace(/^### Minor Changes$/gm, '')
+          content = content.replace(/^### Major Changes$/gm, '')
     
-          singleReleaseData.tagName = `v${releasedPackages[0].packageJson.version}`
-          singleReleaseData.body.push(`## ${pkg.packageJson.name}\n ${content}`)
+          content = `
+          ### ${pkg.packageJson.name}
+    
+          ${content}
+          `
+    
+          chnagelogContent[levelToString(level)].push(content)
+    
+          singleReleaseData.tagName = `v${pkg.packageJson.version}`
           singleReleaseData.preRelease = pkg.packageJson.version.includes("-")
-    
-    
         }
-
-        if (releasedPackages.length) {
+    
+    
+    
+        let finalChangelog: string[] = []
+    
+        if (chnagelogContent.major.length) {
+          finalChangelog.push(
+            `
+            ## 🔥 Breaking Changes
+            
+            ${chnagelogContent.major.join('\n\n')}
+            `
+          )
+        }
+    
+        if (chnagelogContent.minor.length) {
+          finalChangelog.push(
+            `
+            ## 🚀 Features/Improvements
+            
+            ${chnagelogContent.minor.join('\n\n')}
+            `
+          )
+        }
+    
+        if (chnagelogContent.patch.length) {
+          finalChangelog.push(
+            `
+            ## 🐞 Patches
+            
+            ${chnagelogContent.patch.join('\n\n')}
+            `
+          )
+        }
+    
+        if (finalChangelog.length) {
           await octokit.repos.createRelease({
             name: singleReleaseData.tagName,
             tag_name: singleReleaseData.tagName,
-            body: singleReleaseData.body.join('\n\n'),
+            body: finalChangelog.join('\n\n'),
             prerelease: singleReleaseData.preRelease,
             ...github.context.repo,
           });
         }
-
       } catch (err: any) {
         // if we can't find a changelog, the user has probably disabled changelogs
         if (err.code !== "ENOENT") {
@@ -202,7 +291,7 @@ export async function runPublish({
     if (packages.length === 0) {
       throw new Error(
         `No package found.` +
-          "This is probably a bug in the action, please open an issue"
+        "This is probably a bug in the action, please open an issue"
       );
     }
     let pkg = packages[0];
@@ -214,18 +303,20 @@ export async function runPublish({
       if (match) {
         releasedPackages.push(pkg);
         if (createGithubReleases) {
-          console.log("Root", pkg)
-          // await createRelease(octokit, packages)
-          // await createRelease(octokit, {
-          //   pkg,
-          //   tagName: `v${pkg.packageJson.version}`,
-          // });
 
           try {
-     
+            let chnagelogContent: Record<'dep' | 'patch' | 'minor' | 'major', string[]> = {
+              dep: [],
+              patch: [],
+              minor: [],
+              major: [],
+            }
+        
               let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
               let changelog = await fs.readFile(changelogFileName, "utf8");
               let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
+        
+        
         
               if (!changelogEntry) {
                 // we can find a changelog but not the entry for this version
@@ -235,27 +326,71 @@ export async function runPublish({
                 );
               }
               let content = changelogEntry.content.toString()
+              let level = changelogEntry.highestLevel
         
-              content = content.replace(/^### Patch Changes$/gm, '### 🐞 Patches')
-              content = content.replace(/^### Minor Changes$/gm, '### 🚀 Features/Improvements')
-              content = content.replace(/^### Major Changes$/gm, '### 🔥 Breaking Changes')
+              content = content.replace(/^### Patch Changes$/gm, '')
+              content = content.replace(/^### Minor Changes$/gm, '')
+              content = content.replace(/^### Major Changes$/gm, '')
         
+              content = `
+              ### ${pkg.packageJson.name}
         
+              ${content}
+              `
         
-            await octokit.repos.createRelease({
-              name: `v${pkg.packageJson.version}`,
-              tag_name: `v${pkg.packageJson.version}`,
-              body: `${content}`,
-              prerelease: pkg.packageJson.version.includes("-"),
-              ...github.context.repo,
-            });
+              chnagelogContent[levelToString(level)].push(content)
+        
+              const tagName = `v${pkg.packageJson.version}`
+              const preRelease = pkg.packageJson.version.includes("-")
+        
+            let finalChangelog: string[] = []
+        
+            if (chnagelogContent.major.length) {
+              finalChangelog.push(
+                `
+                ## 🔥 Breaking Changes
+                
+                ${chnagelogContent.major.join('\n\n')}
+                `
+              )
+            }
+        
+            if (chnagelogContent.minor.length) {
+              finalChangelog.push(
+                `
+                ## 🚀 Features/Improvements
+                
+                ${chnagelogContent.minor.join('\n\n')}
+                `
+              )
+            }
+        
+            if (chnagelogContent.patch.length) {
+              finalChangelog.push(
+                `
+                ## 🐞 Patches
+                
+                ${chnagelogContent.patch.join('\n\n')}
+                `
+              )
+            }
+        
+            if (finalChangelog.length) {
+              await octokit.repos.createRelease({
+                name: tagName,
+                tag_name: tagName,
+                body: finalChangelog.join('\n\n'),
+                prerelease: preRelease,
+                ...github.context.repo,
+              });
+            }
           } catch (err: any) {
             // if we can't find a changelog, the user has probably disabled changelogs
             if (err.code !== "ENOENT") {
               throw err;
             }
           }
-    
+
         }
         break;
       }
@@ -308,11 +443,10 @@ export async function getVersionPrBody({
   prBodyMaxCharacters,
   branch,
 }: GetMessageOptions) {
-  let messageHeader = `This PR was opened by the [Changesets release](https://github.com/changesets/action) GitHub action. When you're ready to do a release, you can merge this and ${
-    hasPublishScript
-      ? `the packages will be published to npm automatically`
-      : `publish to npm yourself or [setup this action to publish automatically](https://github.com/changesets/action#with-publishing)`
-  }. If you're not ready to do a release yet, that's fine, whenever you add more changesets to ${branch}, this PR will be updated.
+  let messageHeader = `This PR was opened by the [Changesets release](https://github.com/changesets/action) GitHub action. When you're ready to do a release, you can merge this and ${hasPublishScript
+    ? `the packages will be published to npm automatically`
+    : `publish to npm yourself or [setup this action to publish automatically](https://github.com/changesets/action#with-publishing)`
+    }. If you're not ready to do a release yet, that's fine, whenever you add more changesets to ${branch}, this PR will be updated.
 `;
   let messagePrestate = !!preState
     ? `⚠️⚠️⚠️⚠️⚠️⚠️
@@ -430,9 +564,8 @@ export async function runVersion({
 
   // project with `commit: true` setting could have already committed files
   if (!(await gitUtils.checkIfClean())) {
-    const finalCommitMessage = `${commitMessage}${
-      !!preState ? ` (${preState.tag})` : ""
-    }`;
+    const finalCommitMessage = `${commitMessage}${!!preState ? ` (${preState.tag})` : ""
+      }`;
     await gitUtils.commitAll(finalCommitMessage);
   }
 
@@ -481,5 +614,5 @@ export async function runVersion({
       pullRequestNumber: pullRequest.number,
     };
   }
-  
+
 }

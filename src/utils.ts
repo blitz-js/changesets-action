@@ -13,6 +13,19 @@ export const BumpLevels = {
   major: 3,
 } as const;
 
+export const levelToString = (level: number): keyof typeof BumpLevels => {
+  switch (level) {
+    case 3:
+      return "major"
+    case 2:
+      return "minor"
+    case 1:
+      return "patch"
+    default:
+      return "dep"
+  }
+}
+
 export async function getVersionsByDirectory(cwd: string) {
   let { packages } = await getPackages(cwd);
   return new Map(packages.map((x) => [x.dir, x.packageJson.version]));
@@ -43,9 +56,9 @@ export function getChangelogEntry(changelog: string, version: string) {
   let nodes = ast.children as Array<any>;
   let headingStartInfo:
     | {
-        index: number;
-        depth: number;
-      }
+      index: number;
+      depth: number;
+    }
     | undefined;
   let endIndex: number | undefined;
 
