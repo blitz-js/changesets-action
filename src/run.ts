@@ -166,6 +166,9 @@ export async function runPublish({
 
 
   if (tool !== "root") {
+    /* 
+      FOR **INSIDE** A MONOREPO
+    */
     let newTagRegex = /New tag:\s+(@[^/]+\/[^@]+|[^/]+)@([^\s]+)/;
     let packagesByName = new Map(packages.map((x) => [x.packageJson.name, x]));
 
@@ -194,7 +197,7 @@ export async function runPublish({
           preRelease: false
         }
 
-        let chnagelogContent: Record<'dep' | 'patch' | 'minor' | 'major', string[]> = {
+        let changelogContent: Record<'dep' | 'patch' | 'minor' | 'major', string[]> = {
           dep: [],
           patch: [],
           minor: [],
@@ -220,52 +223,36 @@ export async function runPublish({
           content = content.replace(/^### Minor Changes$/gm, '')
           content = content.replace(/^### Major Changes$/gm, '')
     
-          content = `
-          ### ${pkg.packageJson.name}
-    
-          ${content}
-          `
+          content = `### ${pkg.packageJson.name}\n ${content}`
 
           console.log(pkg.packageJson.name, {content, level})
     
-          chnagelogContent[levelToString(level)].push(content)
+          changelogContent[levelToString(level)].push(content)
     
           singleReleaseData.tagName = `v${pkg.packageJson.version}`
           singleReleaseData.preRelease = pkg.packageJson.version.includes("-")
         }
     
         let finalChangelog: string[] = []
-        if (chnagelogContent.major.length) {
+        if (changelogContent.major.length) {
           finalChangelog.push(
-            `
-            ## 🔥 Breaking Changes
-            
-            ${chnagelogContent.major.join('\n\n')}
-            `
+            `## 🔥 Breaking Changes\n ${changelogContent.major.join('\n\n')}`
           )
         }
     
-        if (chnagelogContent.minor.length) {
+        if (changelogContent.minor.length) {
           finalChangelog.push(
-            `
-            ## 🚀 Features/Improvements
-            
-            ${chnagelogContent.minor.join('\n\n')}
-            `
+            `## 🚀 Features/Improvements\n ${changelogContent.minor.join('\n\n')}`
           )
         }
     
-        if (chnagelogContent.patch.length) {
+        if (changelogContent.patch.length) {
           finalChangelog.push(
-            `
-            ## 🐞 Patches
-            
-            ${chnagelogContent.patch.join('\n\n')}
-            `
+            `## 🐞 Patches\n ${changelogContent.patch.join('\n\n')}`
           )
         }
 
-        console.log({chnagelogContent, finalChangelog})
+        console.log({changelogContent, finalChangelog})
     
         if (finalChangelog.length) {
           await octokit.repos.createRelease({
@@ -275,6 +262,8 @@ export async function runPublish({
             prerelease: singleReleaseData.preRelease,
             ...github.context.repo,
           });
+        } else {
+          throw new Error("Final Changelog empty")
         }
       } catch (err: any) {
         // if we can't find a changelog, the user has probably disabled changelogs
@@ -285,6 +274,12 @@ export async function runPublish({
 
     }
   } else {
+
+    /* 
+      FOR **OUTSIDE** A MONOREPO
+    */
+
+
     if (packages.length === 0) {
       throw new Error(
         `No package found.` +
@@ -302,7 +297,7 @@ export async function runPublish({
         if (createGithubReleases) {
 
           try {
-            let chnagelogContent: Record<'dep' | 'patch' | 'minor' | 'major', string[]> = {
+            let changelogContent: Record<'dep' | 'patch' | 'minor' | 'major', string[]> = {
               dep: [],
               patch: [],
               minor: [],
@@ -327,52 +322,36 @@ export async function runPublish({
               content = content.replace(/^### Minor Changes$/gm, '')
               content = content.replace(/^### Major Changes$/gm, '')
         
-              content = `
-              ### ${pkg.packageJson.name}
-        
-              ${content}
-              `
+              content = `### ${pkg.packageJson.name}\n ${content}`
 
               console.log(pkg.packageJson.name, {content, level})
         
-              chnagelogContent[levelToString(level)].push(content)
+              changelogContent[levelToString(level)].push(content)
         
               const tagName = `v${pkg.packageJson.version}`
               const preRelease = pkg.packageJson.version.includes("-")
         
             let finalChangelog: string[] = []
         
-            if (chnagelogContent.major.length) {
+            if (changelogContent.major.length) {
               finalChangelog.push(
-                `
-                ## 🔥 Breaking Changes
-                
-                ${chnagelogContent.major.join('\n\n')}
-                `
+                `## 🔥 Breaking Changes\n ${changelogContent.major.join('\n\n')}`
               )
             }
         
-            if (chnagelogContent.minor.length) {
+            if (changelogContent.minor.length) {
               finalChangelog.push(
-                `
-                ## 🚀 Features/Improvements
-                
-                ${chnagelogContent.minor.join('\n\n')}
-                `
+                `## 🚀 Features/Improvements\n ${changelogContent.minor.join('\n\n')}`
               )
             }
         
-            if (chnagelogContent.patch.length) {
+            if (changelogContent.patch.length) {
               finalChangelog.push(
-                `
-                ## 🐞 Patches
-                
-                ${chnagelogContent.patch.join('\n\n')}
-                `
+                `## 🐞 Patches\n ${changelogContent.patch.join('\n\n')}`
               )
             }
 
-            console.log({chnagelogContent, finalChangelog})
+            console.log({changelogContent, finalChangelog})
         
             if (finalChangelog.length) {
               await octokit.repos.createRelease({
@@ -382,6 +361,8 @@ export async function runPublish({
                 prerelease: preRelease,
                 ...github.context.repo,
               });
+            } else {
+              throw new Error("Final Changelong empty")
             }
           } catch (err: any) {
             // if we can't find a changelog, the user has probably disabled changelogs
