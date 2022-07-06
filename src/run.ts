@@ -50,8 +50,6 @@ const createRelease = async (
       let changelog = await fs.readFile(changelogFileName, "utf8");
       let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
 
-
-
       if (!changelogEntry) {
         // we can find a changelog but not the entry for this version
         // if this is true, something has probably gone wrong
@@ -203,12 +201,10 @@ export async function runPublish({
           major: [],
         }
     
-        for (const pkg of packages) {
+        for (const pkg of releasedPackages) {
           let changelogFileName = path.join(pkg.dir, "CHANGELOG.md");
           let changelog = await fs.readFile(changelogFileName, "utf8");
           let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
-    
-    
     
           if (!changelogEntry) {
             // we can find a changelog but not the entry for this version
@@ -229,6 +225,8 @@ export async function runPublish({
     
           ${content}
           `
+
+          console.log(pkg.packageJson.name, {content, level})
     
           chnagelogContent[levelToString(level)].push(content)
     
@@ -236,10 +234,7 @@ export async function runPublish({
           singleReleaseData.preRelease = pkg.packageJson.version.includes("-")
         }
     
-    
-    
         let finalChangelog: string[] = []
-    
         if (chnagelogContent.major.length) {
           finalChangelog.push(
             `
@@ -269,6 +264,8 @@ export async function runPublish({
             `
           )
         }
+
+        console.log({chnagelogContent, finalChangelog})
     
         if (finalChangelog.length) {
           await octokit.repos.createRelease({
@@ -316,8 +313,6 @@ export async function runPublish({
               let changelog = await fs.readFile(changelogFileName, "utf8");
               let changelogEntry = getChangelogEntry(changelog, pkg.packageJson.version);
         
-        
-        
               if (!changelogEntry) {
                 // we can find a changelog but not the entry for this version
                 // if this is true, something has probably gone wrong
@@ -337,6 +332,8 @@ export async function runPublish({
         
               ${content}
               `
+
+              console.log(pkg.packageJson.name, {content, level})
         
               chnagelogContent[levelToString(level)].push(content)
         
@@ -374,6 +371,8 @@ export async function runPublish({
                 `
               )
             }
+
+            console.log({chnagelogContent, finalChangelog})
         
             if (finalChangelog.length) {
               await octokit.repos.createRelease({
