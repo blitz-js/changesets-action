@@ -516,6 +516,8 @@ export async function runVersion({
     await exec("node", [resolveFrom(cwd, "@changesets/cli/bin.js"), cmd], {
       cwd,
     });
+
+    await exec("pnpm", ["install"], { cwd });
   }
 
   let searchQuery = `repo:${repo}+state:open+head:${versionBranch}+base:${branch}`;
